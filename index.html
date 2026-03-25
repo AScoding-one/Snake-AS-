@@ -2,111 +2,23 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake AS Ultra</title>
-
+<title>Snake AS Ultra Ultimate</title>
 <style>
-
-body{
-margin:0;
-background:#020617;
-font-family:Arial;
-color:white;
-text-align:center;
-overflow:hidden;
-}
-
-h1{
-text-shadow:0 0 20px cyan,0 0 40px cyan;
-}
-
-canvas{
-background:black;
-border:3px solid cyan;
-box-shadow:0 0 40px cyan;
-border-radius:10px;
-touch-action:none;
-
-width:90vw;
-max-width:400px;
-height:90vw;
-max-height:400px;
-}
-
-button{
-padding:10px 20px;
-margin:5px;
-border:none;
-border-radius:8px;
-background:#22c55e;
-color:white;
-cursor:pointer;
-}
-
-#ui{margin:10px;}
-
-#shopBtn{
-position:absolute;
-top:15px;
-left:15px;
-font-size:28px;
-cursor:pointer;
-}
-
-#shop{
-position:absolute;
-top:60px;
-left:15px;
-background:#1e293b;
-padding:15px;
-border-radius:10px;
-display:none;
-width:260px;
-max-height:420px;
-overflow:auto;
-}
-
-.shopItem{
-background:#0f172a;
-padding:8px;
-margin:6px;
-border-radius:6px;
-}
-
-#menuBtn{
-position:absolute;
-top:15px;
-right:15px;
-font-size:28px;
-cursor:pointer;
-}
-
-#menu{
-position:absolute;
-top:60px;
-right:15px;
-background:#1e293b;
-padding:15px;
-border-radius:10px;
-display:none;
-width:200px;
-}
-
-#gameOver{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.9);
-display:none;
-align-items:center;
-justify-content:center;
-flex-direction:column;
-}
-
+body{margin:0;background:#020617;color:white;font-family:Arial;text-align:center;overflow:hidden;}
+canvas{background:black;border:3px solid cyan;box-shadow:0 0 40px cyan;border-radius:10px;width:90vw;max-width:400px;height:90vw;max-height:400px;touch-action:none;}
+button{padding:10px 20px;margin:5px;border:none;border-radius:8px;background:#22c55e;color:white;cursor:pointer;}
+#shopBtn{position:absolute;top:15px;left:15px;font-size:28px;cursor:pointer;}
+#menuBtn{position:absolute;top:15px;right:15px;font-size:28px;cursor:pointer;}
+#shop,#menu{position:absolute;top:60px;padding:15px;border-radius:10px;display:none;}
+#shop{left:15px;width:260px;background:#1e293b;max-height:420px;overflow:auto;}
+#menu{right:15px;width:200px;background:#1e293b;}
+.shopItem{background:#0f172a;padding:8px;margin:6px;border-radius:6px;}
+#gameOver{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;flex-direction:column;}
+#passwordOverlay{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+#passwordOverlay input{padding:10px;font-size:18px;border-radius:5px;border:none;margin-bottom:10px;}
+#passwordOverlay button{padding:10px 20px;}
 </style>
 </head>
-
 <body>
 
 <div id="shopBtn">🛒</div>
@@ -115,11 +27,9 @@ flex-direction:column;
 <div id="menu">
 <h3>Menu</h3>
 <button onclick="resetGame()">Reset Game</button>
-<button onclick="window.open('https://www.youtube.com/@AScodingOfficial')">
-  Press this button and Follow me on Youtube</button>
+<button onclick="triggerSecret()">Secret</button>
+<button onclick="window.open('https://www.youtube.com/@AScodingOfficial')">Follow me on YouTube</button>
 </div>
-
-
 
 <div id="shop">
 <h3>Snake Shop</h3>
@@ -130,7 +40,6 @@ flex-direction:column;
 
 <div id="ui">
 Score: <span id="score">0</span> |
-Level: <span id="level">1</span> |
 Coins: <span id="coins">0</span> |
 Highscore: <span id="highscore">0</span>
 </div>
@@ -139,7 +48,6 @@ Highscore: <span id="highscore">0</span>
 <button onclick="togglePause()">Pause</button>
 
 <br><br>
-
 <canvas id="game" width="400" height="400"></canvas>
 
 <div id="gameOver">
@@ -148,29 +56,20 @@ Highscore: <span id="highscore">0</span>
 <button onclick="startGame()">Restart</button>
 </div>
 
-<script>
+<div id="passwordOverlay">
+<input type="text" id="pwInput" placeholder="Enter Password">
+<button onclick="submitPassword()">OK</button>
+</div>
 
+<script>
 const canvas=document.getElementById("game")
 const ctx=canvas.getContext("2d")
-
 const grid=20
 
-let snake
-let food
-
-let dx
-let dy
-
-let score
-let level
-let speed
-
-let running=false
-let paused=false
-let loop
-
-let particles=[]
-let stars=[]
+let snake, food, dx, dy, score, speed
+let running=false, paused=false, loop
+let particles=[], stars=[]
+let secretEffect=false, secretTimer=0
 
 let coins=parseInt(localStorage.getItem("snakeCoins"))||0
 let ownedSkins=JSON.parse(localStorage.getItem("snakeSkins"))||[0]
@@ -180,427 +79,147 @@ let highscore=localStorage.getItem("snakeHighscore")||0
 document.getElementById("coins").innerText=coins
 document.getElementById("highscore").innerText=highscore
 
-
-/* STARS */
-
 for(let i=0;i<60;i++){
-stars.push({
-x:Math.random()*400,
-y:Math.random()*400,
-s:Math.random()*2
-})
+  stars.push({x:Math.random()*400, y:Math.random()*400, s:Math.random()*2})
 }
-
 
 /* SKINS */
-
 const skins=[
-
 {name:"Classic",color:"#22c55e",price:0},
-{name:"Blue",color:"#3b82f6",price:30},
-{name:"Purple",color:"#a855f7",price:50},
-{name:"Orange",color:"#f97316",price:70},
-{name:"Red",color:"#ef4444",price:90},
-{name:"Cyan",color:"#06b6d4",price:120},
-{name:"Gold",color:"#eab308",price:150},
-{name:"White",color:"#ffffff",price:180}
-
+{name:"Neon Green",color:"#39ff14",glow:true,price:50},
+{name:"Neon Pink",color:"#ff00ff",glow:true,price:50},
+{name:"RGB",rgb:true,price:100},
+{name:"Fire",gradient:["#ff0000","#ff7300","#ffd000"],price:120},
+{name:"Ice",gradient:["#00ffff","#3b82f6","#a5f3fc"],price:120},
+{name:"Galaxy",gradient:["#1e3a8a","#9333ea","#ec4899"],price:150},
+{name:"Lightning",electric:true,price:160},
+{name:"Matrix",trail:true,color:"#00ff00",price:150},
+{name:"Ghost",alpha:0.3,color:"#fff",price:120},
+{name:"King",color:"#ffd700",glow:true,price:200},
+{name:"Cyberpunk",gradient:["#ff0080","#ff8c00","#00ffdc"],price:180},
+{name:"Sunset",gradient:["#ff7e5f","#feb47b"],price:130},
+{name:"Ocean",gradient:["#0072ff","#00c6ff"],price:130},
+{name:"Purple Haze",color:"#a855f7",glow:true,price:120},
+{name:"Red Blaze",color:"#ef4444",glow:true,price:120},
+{name:"Orange Pop",color:"#f97316",price:100},
+{name:"Cyan Spark",color:"#06b6d4",price:100},
+{name:"White Light",color:"#ffffff",price:80},
+{name:"Shadow",color:"#4b5563",alpha:0.4,price:90},
+{name:"Vaporwave",gradient:["#ff6ec7","#8360c3","#00ffff"],price:150},
+{name:"Lava",gradient:["#ff4b1f","#ff9068"],price:150},
+{name:"Aurora",gradient:["#00c6ff","#0072ff","#00ff92"],price:160},
+{name:"Neon Rainbow",rgb:true,glow:true,price:200},
+{name:"Dark Matter",gradient:["#0f0c29","#302b63","#24243e"],price:180},
+{name:"Electric Blue",color:"#1e90ff",glow:true,price:100},
+{name:"Magenta Flash",color:"#ff00ff",glow:true,price:100},
+{name:"Solar Flare",gradient:["#ff7e5f","#feb47b","#ff512f"],price:170},
+{name:"Tropical",gradient:["#f09819","#ff512f","#ffd700"],price:160},
+{name:"Mystic",gradient:["#8360c3","#2ebf91"],price:140},
+{name:"Neon Cyan",color:"#00ffff",glow:true,price:120},
+{name:"Ultimate Supreme",rgb:true,glow:true,price:500} // DER ULTIMATIVE SKIN
 ]
 
-
 /* SHOP */
-
 function loadShop(){
-
-const container=document.getElementById("shopItems")
-container.innerHTML=""
-
-skins.forEach((s,i)=>{
-
-let owned=ownedSkins.includes(i)
-let btn=""
-
-if(owned){
-
-if(skin===i){
-btn="<button disabled>Equipped</button>"
-}else{
-btn=`<button onclick="equipSkin(${i})">Equip</button>`
+  const container=document.getElementById("shopItems")
+  container.innerHTML=""
+  skins.forEach((s,i)=>{
+    let owned=ownedSkins.includes(i)
+    let btn=owned?(skin===i?"<button disabled>Equipped</button>":`<button onclick="equipSkin(${i})">Equip</button>`):`<button onclick="buySkin(${i},${s.price})">Buy</button>`
+    container.innerHTML+=`<div class="shopItem">${s.name} - ${s.price}<br>${btn}</div>`
+  })
 }
+function buySkin(id,price){if(coins<price){alert("Not enough coins"); return;} coins-=price; ownedSkins.push(id); save(); loadShop();}
+function equipSkin(id){skin=id; save(); loadShop();}
+function save(){localStorage.setItem("snakeCoins",coins); localStorage.setItem("snakeSkins",JSON.stringify(ownedSkins)); localStorage.setItem("snakeSkin",skin); document.getElementById("coins").innerText=coins}
 
-}else{
+document.getElementById("shopBtn").onclick=()=>{let s=document.getElementById("shop"); s.style.display=s.style.display==="block"?"none":"block"; loadShop();}
+document.getElementById("menuBtn").onclick=()=>{let m=document.getElementById("menu"); m.style.display=m.style.display==="block"?"none":"block";}
 
-btn=`<button onclick="buySkin(${i},${s.price})">Buy</button>`
-
+/* SECRET EFFECT */
+let passwordAction=""
+function triggerSecret(){passwordAction="secret"; showPasswordOverlay();}
+function showPasswordOverlay(){document.getElementById("passwordOverlay").style.display="flex"; document.getElementById("pwInput").value=""; document.getElementById("pwInput").focus();}
+function submitPassword(){
+  const input=document.getElementById("pwInput").value
+  if(input==="MPJ17" && passwordAction==="secret"){
+    coins=999999999; save(); alert("💰 UNLIMITED COINS!"); secretEffect=true; secretTimer=300
+  } else if(passwordAction==="secret"){alert("Wrong Password!")}
+  document.getElementById("passwordOverlay").style.display="none"
 }
-
-container.innerHTML+=`
-<div class="shopItem">
-${s.name} - ${s.price}
-<br>
-${btn}
-</div>`
-})
-
-}
-
-function buySkin(id,price){
-
-if(coins<price){
-alert("Not enough coins")
-return
-}
-
-coins-=price
-ownedSkins.push(id)
-
-localStorage.setItem("snakeCoins",coins)
-localStorage.setItem("snakeSkins",JSON.stringify(ownedSkins))
-
-document.getElementById("coins").innerText=coins
-
-loadShop()
-
-}
-
-function equipSkin(id){
-skin=id
-localStorage.setItem("snakeSkin",skin)
-loadShop()
-}
-
-document.getElementById("shopBtn").onclick=()=>{
-
-let shop=document.getElementById("shop")
-
-shop.style.display=
-shop.style.display==="block"
-?"none"
-:"block"
-
-loadShop()
-
-}
-
-
-/* MENU */
-
-document.getElementById("menuBtn").onclick=()=>{
-
-let menu=document.getElementById("menu")
-
-menu.style.display=
-menu.style.display==="block"
-?"none"
-:"block"
-
-}
-
 
 /* RESET */
-
-function resetGame(){
-
-if(confirm("Reset the whole game?")){
-localStorage.clear()
-location.reload()
-}
-
-}
-
+function resetGame(){if(confirm("Reset the whole game?")){localStorage.clear(); location.reload();}}
 
 /* GAME */
-
 function startGame(){
-
-document.getElementById("gameOver").style.display="none"
-
-snake=[{x:200,y:200}]
-
-dx=grid
-dy=0
-
-score=0
-level=1
-
-speed=140
-
-spawnFood()
-
-running=true
-paused=false
-
-clearInterval(loop)
-loop=setInterval(update,speed)
-
+  document.getElementById("gameOver").style.display="none"
+  snake=[{x:200,y:200}]
+  dx=grid; dy=0
+  score=0; speed=70
+  spawnFood()
+  running=true; paused=false
+  clearInterval(loop)
+  loop=setInterval(update,speed)
 }
-
-
-/* PAUSE */
-
-function togglePause(){
-if(!running)return
-paused=!paused
-}
-
-
-/* FOOD */
-
-function spawnFood(){
-
-food={
-x:Math.floor(Math.random()*20)*grid,
-y:Math.floor(Math.random()*20)*grid
-}
-
-}
-
-
-/* UPDATE */
-
+function togglePause(){if(!running) return; paused=!paused;}
+function spawnFood(){food={x:Math.floor(Math.random()*20)*grid, y:Math.floor(Math.random()*20)*grid}}
 function update(){
-
-if(!running || paused)return
-
-let head={
-x:snake[0].x+dx,
-y:snake[0].y+dy
+  if(!running || paused) return
+  let head={x:snake[0].x+dx,y:snake[0].y+dy}
+  snake.unshift(head)
+  if(head.x===food.x && head.y===food.y){score++; coins++; spawnFood(); createParticles(food.x+10,food.y+10)}
+  else snake.pop()
+  if(head.x<0||head.y<0||head.x>=400||head.y>=400) gameOver()
+  for(let i=1;i<snake.length;i++){if(head.x===snake[i].x && head.y===snake[i].y) gameOver()}
+  if(score>highscore){highscore=score; localStorage.setItem("snakeHighscore",highscore)}
+  document.getElementById("score").innerText=score
+  document.getElementById("coins").innerText=coins
+  document.getElementById("highscore").innerText=highscore
+  draw()
+  if(secretEffect){secretTimer--; if(secretTimer<=0) secretEffect=false}
 }
-
-snake.unshift(head)
-
-if(head.x===food.x && head.y===food.y){
-
-createParticles(food.x+10,food.y+10)
-
-score++
-coins++
-
-spawnFood()
-
-}else{
-
-snake.pop()
-
-}
-
-if(head.x<0||head.y<0||head.x>=400||head.y>=400)gameOver()
-
-for(let i=1;i<snake.length;i++){
-if(head.x===snake[i].x && head.y===snake[i].y)gameOver()
-}
-
-if(score>highscore){
-highscore=score
-localStorage.setItem("snakeHighscore",highscore)
-}
-
-level=Math.floor(score/10)+1
-
-document.getElementById("score").innerText=score
-document.getElementById("level").innerText=level
-document.getElementById("coins").innerText=coins
-document.getElementById("highscore").innerText=highscore
-
-draw()
-
-}
-
 
 /* DRAW */
-
-function draw(){
-
-ctx.fillStyle="#020617"
-ctx.fillRect(0,0,400,400)
-
-drawStars()
-drawFood()
-drawSnake()
-drawParticles()
-
-}
-
-
-/* STARS */
-
-function drawStars(){
-
-ctx.fillStyle="white"
-
-stars.forEach(s=>{
-
-ctx.fillRect(s.x,s.y,s.s,s.s)
-
-s.y+=0.3
-
-if(s.y>400)s.y=0
-
-})
-
-}
-
-
-/* FOOD */
-
-function drawFood(){
-
-ctx.shadowBlur=45
-ctx.shadowColor="red"
-
-ctx.fillStyle="red"
-
-ctx.beginPath()
-ctx.arc(food.x+10,food.y+10,8,0,Math.PI*2)
-ctx.fill()
-
-ctx.shadowBlur=0
-
-}
-
-
-/* SNAKE */
-
-function drawSnake(){
-
-snake.forEach((s,i)=>{
-
-let color=skins[skin].color
-
-ctx.shadowBlur=25+i*2
-ctx.shadowColor=color
-
-ctx.fillStyle=color
-
-ctx.beginPath()
-ctx.arc(s.x+10,s.y+10,9,0,Math.PI*2)
-ctx.fill()
-
-})
-
-ctx.shadowBlur=0
-
-}
-
-
-/* PARTICLES */
-
-function createParticles(x,y){
-
-for(let i=0;i<30;i++){
-
-particles.push({
-x:x,
-y:y,
-vx:(Math.random()-0.5)*6,
-vy:(Math.random()-0.5)*6,
-life:35
-})
-
-}
-
-}
-
-function drawParticles(){
-
-particles.forEach((p,i)=>{
-
-p.x+=p.vx
-p.y+=p.vy
-p.life--
-
-ctx.shadowBlur=15
-ctx.shadowColor="white"
-
-ctx.fillStyle="white"
-ctx.fillRect(p.x,p.y,3,3)
-
-ctx.shadowBlur=0
-
-if(p.life<=0)particles.splice(i,1)
-
-})
-
-}
-
-
-/* GAME OVER */
-
-function gameOver(){
-
-running=false
-
-document.getElementById("finalScore").innerText="Score: "+score
-
-document.getElementById("gameOver").style.display="flex"
-
-}
-
-
-/* KEYBOARD CONTROLS */
-
-document.addEventListener("keydown",e=>{
-
-if(e.key==="ArrowUp" && dy===0){dx=0;dy=-grid}
-if(e.key==="ArrowDown" && dy===0){dx=0;dy=grid}
-if(e.key==="ArrowLeft" && dx===0){dx=-grid;dy=0}
-if(e.key==="ArrowRight" && dx===0){dx=grid;dy=0}
-
-if(e.key==="p"||e.key==="P")togglePause()
-
-})
-
-
-/* SWIPE CONTROLS */
-
-let touchStartX=0
-let touchStartY=0
-
-canvas.addEventListener("touchstart",e=>{
-
-touchStartX=e.touches[0].clientX
-touchStartY=e.touches[0].clientY
-
-})
-
+function draw(){ctx.fillStyle="#020617"; ctx.fillRect(0,0,400,400); drawStars(); drawFood(); drawSnake(); drawParticles();}
+function drawStars(){ctx.fillStyle="white"; stars.forEach(s=>{ctx.fillRect(s.x,s.y,s.s,s.s); s.y+=0.3; if(s.y>400)s.y=0})}
+function drawFood(){ctx.shadowBlur=45; ctx.shadowColor="red"; ctx.fillStyle="red"; ctx.beginPath(); ctx.arc(food.x+10,food.y+10,8,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0}
+function drawSnake(){snake.forEach((s,i)=>{
+  let sk=skins[skin]; let color=sk.color||"#fff"
+  if(secretEffect) color=`hsl(${(Date.now()/10+i*20)%360},100%,50%)`
+  else if(sk.rgb) color=`hsl(${(Date.now()/10+i*20)%360},100%,50%)`
+  if(sk.gradient){let grad=ctx.createLinearGradient(s.x,s.y,s.x+20,s.y+20); sk.gradient.forEach((c,j)=>grad.addColorStop(j/(sk.gradient.length-1),c)); color=grad}
+  ctx.shadowBlur=sk.glow?15:0; ctx.shadowColor=color; ctx.fillStyle=color
+  ctx.beginPath(); ctx.arc(s.x+10,s.y+10,9,0,Math.PI*2); ctx.fill()
+}); ctx.shadowBlur=0}
+
+function createParticles(x,y){for(let i=0;i<30;i++){particles.push({x:x,y:y,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6,life:35})}}
+function drawParticles(){particles.forEach((p,i)=>{p.x+=p.vx; p.y+=p.vy; p.life--; ctx.fillStyle="white"; ctx.fillRect(p.x,p.y,3,3); if(p.life<=0)particles.splice(i,1)})}
+function gameOver(){running=false; document.getElementById("finalScore").innerText="Score: "+score; document.getElementById("gameOver").style.display="flex"}
+
+/* SWIPE MOBILE */
+let sx=0,sy=0
+canvas.addEventListener("touchstart",e=>{sx=e.touches[0].clientX; sy=e.touches[0].clientY},{passive:true})
 canvas.addEventListener("touchend",e=>{
-
-let touchEndX=e.changedTouches[0].clientX
-let touchEndY=e.changedTouches[0].clientY
-
-let diffX=touchEndX-touchStartX
-let diffY=touchEndY-touchStartY
-
-if(Math.abs(diffX)>Math.abs(diffY)){
-
-if(diffX>0 && dx===0){
-dx=grid
-dy=0
-}
-
-else if(diffX<0 && dx===0){
-dx=-grid
-dy=0
-}
-
-}else{
-
-if(diffY>0 && dy===0){
-dx=0
-dy=grid
-}
-
-else if(diffY<0 && dy===0){
-dx=0
-dy=-grid
-}
-
-}
-
+  let dxs=e.changedTouches[0].clientX-sx; let dys=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dxs)>Math.abs(dys)){
+    if(dxs>25 && dx===0){dx=grid; dy=0}
+    if(dxs<-25 && dx===0){dx=-grid; dy=0}
+  }else{
+    if(dys>25 && dy===0){dx=0; dy=grid}
+    if(dys<-25 && dy===0){dx=0; dy=-grid}
+  }
 })
 
+/* KEYBOARD */
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp"&&dy===0){dx=0; dy=-grid}
+  if(e.key==="ArrowDown"&&dy===0){dx=0; dy=grid}
+  if(e.key==="ArrowLeft"&&dx===0){dx=-grid; dy=0}
+  if(e.key==="ArrowRight"&&dx===0){dx=grid; dy=0}
+  if(e.key==="p"||e.key==="P") togglePause()
+})
 </script>
 
 </body>
 </html>
-
